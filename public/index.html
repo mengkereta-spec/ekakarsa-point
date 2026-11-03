@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ekakarsa Point</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <script src="/app.js" defer></script>
+</head>
+<body class="bg-brandLight text-gray-800 font-sans min-h-screen flex flex-col">
+
+  <header class="bg-brandGreen text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-3">
+      <div class="flex items-center space-x-2 shrink-0">
+        <i class="fa-solid fa-ranking-star text-brandGold text-2xl"></i>
+        <h1 class="text-lg sm:text-xl font-bold tracking-wide whitespace-nowrap">EKAKARSA POINT</h1>
+      </div>
+      <div id="adminStatus" class="text-xs bg-white/20 px-3 py-1 rounded-full font-medium truncate">Mode: Pengunjung</div>
+    </div>
+  </header>
+
+  <nav class="bg-white shadow-sm border-b overflow-x-auto">
+    <div id="tabs" class="max-w-7xl mx-auto flex px-4 space-x-2 sm:space-x-4 py-2 whitespace-nowrap">
+      <button data-tab="dashboard" class="tab-btn"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
+      <button data-tab="anggota" class="tab-btn"><i class="fa-solid fa-users"></i> Anggota</button>
+      <button data-tab="divisi" class="tab-btn"><i class="fa-solid fa-sitemap"></i> Divisi</button>
+      <button data-tab="proker" class="tab-btn"><i class="fa-solid fa-clipboard-list"></i> Program Kerja</button>
+      <button data-tab="pelanggaran" class="tab-btn staff-only hidden"><i class="fa-solid fa-gavel"></i> Pelanggaran <span id="pendingBadge" class="hidden ml-1 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"></span></button>
+      <button data-tab="riwayat" class="tab-btn"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</button>
+      <button data-tab="admin" class="tab-btn"><i class="fa-solid fa-lock"></i> <span id="adminTabLabel">Akses Admin</span></button>
+    </div>
+  </nav>
+
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6">
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-brandGreen flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase">Total Keseluruhan Poin Pengurus</p>
+            <h2 id="dashTotalPoin" class="text-3xl font-bold text-gray-800 mt-1">0</h2>
+          </div>
+          <div class="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-brandGreen text-2xl"><i class="fa-solid fa-star"></i></div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-brandGold flex items-center justify-between">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-500 uppercase">Poin Tertinggi</p>
+            <h2 id="dashTopMember" class="text-xl font-bold text-gray-800 mt-1 truncate">-</h2>
+            <p id="dashTopScore" class="text-sm text-brandGold font-semibold mt-1">0 Poin</p>
+          </div>
+          <div class="w-14 h-14 shrink-0 rounded-full bg-amber-100 flex items-center justify-center text-brandGold text-2xl"><i class="fa-solid fa-trophy"></i></div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-sky-600 flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase">Jumlah Pengurus</p>
+            <h2 id="dashCount" class="text-3xl font-bold text-gray-800 mt-1">0</h2>
+          </div>
+          <div class="w-14 h-14 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 text-2xl"><i class="fa-solid fa-users"></i></div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-fire text-brandGold"></i> Papan Peringkat Anggota OSIS</h3>
+          <select id="dashFilterKelas" class="px-3 py-2 border rounded-lg text-sm bg-white">
+            <option value="">Semua kelas</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-50 text-gray-600 uppercase text-xs">
+                <th class="p-3 rounded-l-lg">Peringkat</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3">Divisi</th><th class="p-3">Jabatan</th><th class="p-3 rounded-r-lg text-right">Poin</th>
+              </tr>
+            </thead>
+            <tbody id="dashLeaderboard" class="divide-y divide-gray-100 text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANGGOTA -->
+    <section id="tab-anggota" class="space-y-6 hidden">
+      <div class="flex justify-between items-center flex-col sm:flex-row gap-3">
+        <h2 class="text-xl font-bold text-gray-800">Daftar Anggota OSIS</h2>
+        <div class="w-full sm:w-72">
+          <input type="search" id="searchAnggota" placeholder="Cari nama/kelas/divisi..." class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brandGreen">
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-50 text-gray-600 uppercase text-xs">
+                <th class="p-3">Nama Anggota</th><th class="p-3">Kelas</th><th class="p-3">Divisi</th><th class="p-3">Jabatan</th><th class="p-3 text-right">Poin</th>
+                <th class="p-3 text-center admin-only hidden">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableAnggota" class="divide-y divide-gray-100 text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DIVISI -->
+    <section id="tab-divisi" class="space-y-6 hidden">
+      <h2 class="text-xl font-bold text-gray-800">Daftar Divisi Organisasi</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="gridDivisi"></div>
+    </section>
+
+    <!-- PROKER -->
+    <section id="tab-proker" class="space-y-6 hidden">
+      <h2 class="text-xl font-bold text-gray-800">Program Kerja Per Divisi</h2>
+      <div class="space-y-4" id="listProker"></div>
+    </section>
+
+    <!-- PELANGGARAN (khusus pengelola) -->
+    <section id="tab-pelanggaran" class="space-y-6 hidden">
+      <div class="flex justify-between items-center flex-col sm:flex-row gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800">Manajemen Pelanggaran</h2>
+          <p id="violationRule" class="text-xs text-gray-500 mt-1"></p>
+        </div>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <select id="violationFilter" class="px-3 py-2 border rounded-lg text-sm bg-white">
+            <option value="">Semua status</option>
+            <option value="pending">Menunggu persetujuan</option>
+            <option value="approved">Disahkan</option>
+            <option value="rejected">Ditolak</option>
+          </select>
+          <button data-action="open-violation-form" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition whitespace-nowrap"><i class="fa-solid fa-plus"></i> Laporkan</button>
+        </div>
+      </div>
+      <div id="listViolations" class="space-y-3"></div>
+    </section>
+
+    <!-- RIWAYAT -->
+    <section id="tab-riwayat" class="space-y-6 hidden">
+      <div class="flex justify-between items-center flex-col sm:flex-row gap-3">
+        <h2 class="text-xl font-bold text-gray-800">Riwayat Perubahan & Aktivitas</h2>
+        <select id="historyFilter" class="w-full sm:w-72 px-3 py-2 border rounded-lg text-sm bg-white"><option value="">Semua anggota</option></select>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <div id="listRiwayat" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="tab-admin" class="space-y-6 hidden">
+      <div id="adminLoginBox" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-sm border text-center space-y-4">
+        <div class="w-16 h-16 bg-green-100 text-brandGreen rounded-full flex items-center justify-center mx-auto text-2xl"><i class="fa-solid fa-lock"></i></div>
+        <h2 class="text-xl font-bold text-gray-800">Masuk Akses Pengelola</h2>
+        <p class="text-sm text-gray-500">Khusus Admin, Pembina, Ketua, dan Calon Ketua OSIS. Anggota cukup melihat tanpa masuk.</p>
+        <form id="loginForm" class="space-y-3">
+          <input type="text" name="username" autocomplete="username" placeholder="Username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brandGreen" required>
+          <input type="password" name="password" autocomplete="current-password" placeholder="Password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-brandGreen" required>
+          <button type="submit" class="w-full bg-brandGreen text-white py-2 rounded-lg font-medium hover:bg-emerald-700 transition">Masuk</button>
+        </form>
+      </div>
+
+      <div id="adminPanel" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row gap-3 justify-between sm:items-center bg-white p-4 rounded-xl shadow-sm border">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-100 text-brandGreen rounded-full flex items-center justify-center font-bold"><i class="fa-solid fa-user-shield"></i></div>
+            <div>
+              <h3 id="panelTitle" class="font-bold text-gray-800">Panel Kontrol</h3>
+              <p id="panelSubtitle" class="text-xs text-gray-500">Kelola anggota, divisi, dan program kerja</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button data-action="open-password" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition">Ganti Password</button>
+            <button data-action="logout" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition">Keluar</button>
+          </div>
+        </div>
+
+        <div id="approverInfo" class="hidden bg-amber-50 border border-amber-200 p-4 rounded-xl text-sm text-amber-800">
+          <i class="fa-solid fa-circle-info"></i> Sebagai <b id="approverRole"></b>, Anda dapat membuat laporan pelanggaran dan menyetujui/menolak laporan di tab <b>Pelanggaran</b>.
+        </div>
+
+        <div class="admin-only hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Tambah anggota -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border space-y-4">
+              <h4 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-user-plus text-brandGreen"></i> Tambah Anggota</h4>
+              <form id="addMemberForm" class="space-y-3">
+                <input type="text" name="name" placeholder="Nama Anggota" class="input" required maxlength="120">
+                <div class="grid grid-cols-2 gap-3">
+                  <input type="text" name="kelas" placeholder="Kelas (cth: X / XI)" class="input" maxlength="20">
+                  <input type="number" name="points" placeholder="Poin Awal" class="input" value="0" required>
+                </div>
+                <select name="divisionId" class="input division-select"></select>
+                <input type="text" name="jabatan" placeholder="Jabatan (cth: Anggota / Ketua Divisi)" class="input" value="Anggota" maxlength="60">
+                <button type="submit" class="btn-primary w-full">Tambah Anggota</button>
+              </form>
+            </div>
+
+            <!-- Import Excel -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border space-y-4">
+              <h4 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-file-excel text-brandGreen"></i> Import Anggota dari Excel</h4>
+              <p class="text-xs text-gray-500">Kolom yang dibaca: <b>Nama</b> (wajib), Kelas, Divisi, Jabatan, Poin. Anggota baru dibuat otomatis; divisi yang belum ada juga dibuat otomatis.</p>
+              <form id="importForm" class="space-y-3">
+                <input type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-green-50 file:text-brandGreen file:font-medium" required>
+                <label class="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" name="update" class="rounded"> Perbarui divisi/jabatan anggota yang sudah ada</label>
+                <div class="flex gap-2">
+                  <button type="submit" class="btn-primary flex-1">Pratinjau Import</button>
+                  <a href="/api/import/template" class="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-100 whitespace-nowrap"><i class="fa-solid fa-download"></i> Template</a>
+                </div>
+              </form>
+              <a href="/api/export/members" class="text-xs text-brandGreen hover:underline"><i class="fa-solid fa-file-export"></i> Ekspor data anggota ke Excel</a>
+            </div>
+
+            <!-- Divisi -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border space-y-4">
+              <h4 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-folder-plus text-brandGreen"></i> Tambah Divisi</h4>
+              <form id="addDivisionForm" class="space-y-3">
+                <input type="text" name="name" placeholder="Nama Divisi Baru" class="input" required maxlength="80">
+                <button type="submit" class="btn-primary w-full">Tambah Divisi</button>
+              </form>
+              <div class="pt-2">
+                <label class="text-xs text-gray-500 font-medium">Hapus Divisi:</label>
+                <div class="flex gap-2 mt-1">
+                  <select id="delDivisiSelect" class="input division-select-plain"></select>
+                  <button data-action="delete-division" class="btn-danger">Hapus</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Proker -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border space-y-4">
+              <h4 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-list-check text-brandGreen"></i> Tambah Program Kerja</h4>
+              <form id="addProgramForm" class="space-y-3">
+                <select name="divisionId" class="input division-select-plain" required></select>
+                <input type="text" name="name" placeholder="Nama Program Kerja" class="input" required maxlength="200">
+                <button type="submit" class="btn-primary w-full">Tambah Proker</button>
+              </form>
+              <p class="text-xs text-gray-400">Hapus proker langsung dari tab Program Kerja.</p>
+            </div>
+          </div>
+
+          <!-- Akun pengelola -->
+          <div class="bg-white p-5 rounded-xl shadow-sm border space-y-4">
+            <h4 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-id-badge text-brandGreen"></i> Akun Pengelola (Admin / Pembina / Ketua / Calon Ketua)</h4>
+            <form id="addUserForm" class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              <input type="text" name="name" placeholder="Nama lengkap" class="input" required maxlength="120">
+              <input type="text" name="username" placeholder="Username" class="input" required pattern="[a-z0-9._\-]{3,32}" title="3-32 karakter: huruf kecil, angka, titik, minus, garis bawah">
+              <select name="role" class="input" required>
+                <option value="pembina">Pembina OSIS</option>
+                <option value="ketua">Ketua OSIS</option>
+                <option value="calon_ketua">Calon Ketua OSIS</option>
+                <option value="admin">Admin</option>
+              </select>
+              <input type="password" name="password" placeholder="Password (min. 8)" class="input" required minlength="8" autocomplete="new-password">
+              <button type="submit" class="btn-primary">Buat Akun</button>
+            </form>
+            <div id="listUsers" class="divide-y text-sm"></div>
+          </div>
+
+          <!-- Reset -->
+          <div class="bg-red-50 border border-red-200 p-5 rounded-xl space-y-3">
+            <h4 class="font-bold text-red-700 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> Zona Berbahaya (Reset Poin)</h4>
+            <p class="text-xs text-red-600">Mengembalikan poin <b>seluruh anggota</b> menjadi 0. Data anggota, divisi, dan proker tidak dihapus, dan setiap perubahan tetap tercatat di Riwayat. Ketik <b>RESET</b> dan masukkan password Anda.</p>
+            <form id="resetForm" class="flex flex-col sm:flex-row gap-2 max-w-xl">
+              <input type="text" name="confirm" placeholder="Ketik RESET" class="input border-red-300" required autocomplete="off">
+              <input type="password" name="password" placeholder="Password Anda" class="input border-red-300" required autocomplete="current-password">
+              <button type="submit" class="btn-danger whitespace-nowrap">Reset Semua Poin</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="text-center text-xs text-gray-400 py-4">Ekakarsa Point &middot; Sistem Manajemen Poin OSIS</footer>
+
+  <!-- Modal generik -->
+  <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto" id="modalBody"></div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] hidden px-4 py-2 rounded-lg shadow-lg text-sm text-white"></div>
+</body>
+</html>

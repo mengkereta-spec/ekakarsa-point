@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .tab-btn { @apply px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100 flex items-center gap-2; }
+  .tab-btn.active { @apply text-brandGreen bg-green-50 hover:bg-green-50; }
+  .input { @apply w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brandGreen; }
+  .btn-primary { @apply bg-brandGreen text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition disabled:opacity-50; }
+  .btn-danger { @apply bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition disabled:opacity-50; }
+  .btn-ghost { @apply px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-100; }
+  .icon-btn { @apply w-8 h-8 inline-flex items-center justify-center rounded-lg transition; }
+  .chip { @apply inline-block text-[11px] font-medium px-2 py-0.5 rounded-full; }
+}

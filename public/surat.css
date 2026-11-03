@@ -1,0 +1,7 @@
+.paper { width: 210mm; min-height: 297mm; padding: 20mm 22mm; font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #111; }
+.paper h1, .paper h2 { font-family: inherit; }
+.paper table.data td { padding: 1px 6px 1px 0; vertical-align: top; }
+.paper .sig { min-height: 32mm; }
+@media screen and (max-width: 800px) { .paper { width: 100%; min-height: auto; padding: 8mm; } }
+@page { size: A4; margin: 0; }
+@media print { .no-print { display: none !important; } .paper { box-shadow: none; margin: 0; } }

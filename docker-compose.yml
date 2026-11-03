@@ -1,0 +1,31 @@
+# Menjalankan aplikasi + PostgreSQL di satu server (VPS).
+# 1) cp .env.example .env lalu isi JWT_SECRET, ADMIN_PASSWORD, POSTGRES_PASSWORD
+# 2) docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ekakarsa
+      POSTGRES_USER: ekakarsa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ekakarsa -d ekakarsa"]
+      interval: 5s
+      retries: 10
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://ekakarsa:${POSTGRES_PASSWORD}@db:5432/ekakarsa
+      DATABASE_SSL: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  dbdata:
