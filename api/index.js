@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
     console.error('[migrate]', e);
     res.statusCode = 503;
     res.setHeader('Content-Type', 'application/json');
-    return res.end(JSON.stringify({ error: 'Database belum siap. Coba lagi sebentar.' }));
+    return res.end(JSON.stringify({ error: 'Database belum siap. Coba lagi sebentar.', code: e.code || e.name || null }));
   }
   return app(req, res);
 };
