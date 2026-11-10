@@ -13,7 +13,7 @@
   <header class="bg-brandGreen text-white shadow-md sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-3">
       <div class="flex items-center space-x-2 shrink-0">
-        <i class="fa-solid fa-ranking-star text-brandGold text-2xl"></i>
+        <i class="fa-solid fa-star text-brandGold text-2xl"></i>
         <h1 class="text-lg sm:text-xl font-bold tracking-wide whitespace-nowrap">EKAKARSA POINT</h1>
       </div>
       <div id="adminStatus" class="text-xs bg-white/20 px-3 py-1 rounded-full font-medium truncate">Mode: Pengunjung</div>
@@ -36,7 +36,7 @@
 
     <!-- DASHBOARD -->
     <section id="tab-dashboard" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-brandGreen flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500 uppercase">Total Keseluruhan Poin Pengurus</p>
@@ -44,39 +44,12 @@
           </div>
           <div class="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-brandGreen text-2xl"><i class="fa-solid fa-star"></i></div>
         </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-brandGold flex items-center justify-between">
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-gray-500 uppercase">Poin Tertinggi</p>
-            <h2 id="dashTopMember" class="text-xl font-bold text-gray-800 mt-1 truncate">-</h2>
-            <p id="dashTopScore" class="text-sm text-brandGold font-semibold mt-1">0 Poin</p>
-          </div>
-          <div class="w-14 h-14 shrink-0 rounded-full bg-amber-100 flex items-center justify-center text-brandGold text-2xl"><i class="fa-solid fa-trophy"></i></div>
-        </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-sky-600 flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500 uppercase">Jumlah Pengurus</p>
             <h2 id="dashCount" class="text-3xl font-bold text-gray-800 mt-1">0</h2>
           </div>
           <div class="w-14 h-14 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 text-2xl"><i class="fa-solid fa-users"></i></div>
-        </div>
-      </div>
-
-      <div class="bg-white p-6 rounded-xl shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-fire text-brandGold"></i> Papan Peringkat Anggota OSIS</h3>
-          <select id="dashFilterKelas" class="px-3 py-2 border rounded-lg text-sm bg-white">
-            <option value="">Semua kelas</option>
-          </select>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-gray-50 text-gray-600 uppercase text-xs">
-                <th class="p-3 rounded-l-lg">Peringkat</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3">Divisi</th><th class="p-3">Jabatan</th><th class="p-3 rounded-r-lg text-right">Poin</th>
-              </tr>
-            </thead>
-            <tbody id="dashLeaderboard" class="divide-y divide-gray-100 text-sm"></tbody>
-          </table>
         </div>
       </div>
     </section>

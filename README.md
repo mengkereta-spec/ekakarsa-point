@@ -5,7 +5,7 @@ Aplikasi web (frontend + backend + database PostgreSQL) berdasarkan prototipe *E
 ## Fitur
 
 **Publik / Anggota (tanpa login, hanya melihat)**
-- Dashboard & papan peringkat (filter per kelas), daftar anggota, divisi, program kerja
+- Dashboard (total poin & jumlah pengurus), daftar anggota, divisi, program kerja
 - Riwayat seluruh perubahan poin (siapa, kapan, alasan, poin sebelum → sesudah), bisa difilter per anggota
 - Tidak ada tombol edit; semua perubahan ditolak oleh server tanpa login
 

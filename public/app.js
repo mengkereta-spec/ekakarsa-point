@@ -70,31 +70,11 @@
     renderDashboard(); renderAnggota(); renderDivisi(); renderProker(); renderRiwayat(); renderViolations(); renderUsers();
   }
 
-  function rankBadge(idx) {
-    const c = idx === 0 ? 'bg-amber-100 text-amber-700 font-bold' : idx === 1 ? 'bg-gray-100 text-gray-700 font-bold' : idx === 2 ? 'bg-orange-100 text-orange-700 font-bold' : 'text-gray-600';
-    const icon = idx < 3 ? '<i class="fa-solid fa-medal mr-1"></i>' : '';
-    return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs ${c}">${icon}#${idx + 1}</span>`;
-  }
   const pointClass = (p) => (p < 0 ? 'text-red-600' : 'text-brandGreen');
 
   function renderDashboard() {
-    const kelas = $('#dashFilterKelas').value;
-    const list = state.members.filter((m) => !kelas || m.kelas === kelas);
-    const total = state.members.reduce((a, m) => a + m.points, 0);
-    $('#dashTotalPoin').textContent = total;
+    $('#dashTotalPoin').textContent = state.members.reduce((a, m) => a + m.points, 0);
     $('#dashCount').textContent = state.members.length;
-    const top = state.members[0];
-    $('#dashTopMember').textContent = top ? top.name : '-';
-    $('#dashTopScore').textContent = `${top ? top.points : 0} Poin`;
-    $('#dashLeaderboard').innerHTML = list.length ? list.map((m, i) => `
-      <tr class="hover:bg-gray-50">
-        <td class="p-3">${rankBadge(i)}</td>
-        <td class="p-3 font-medium text-gray-800">${esc(m.name)}</td>
-        <td class="p-3 text-gray-600">${esc(m.kelas || '-')}</td>
-        <td class="p-3 text-gray-600">${esc(m.division || 'Tanpa Divisi')}</td>
-        <td class="p-3 text-gray-600">${esc(m.jabatan)}</td>
-        <td class="p-3 text-right font-bold ${pointClass(m.points)}">${m.points}</td>
-      </tr>`).join('') : '<tr><td colspan="6" class="p-4 text-center text-gray-400">Belum ada data anggota</td></tr>';
   }
 
   function renderAnggota() {
@@ -211,10 +191,6 @@
     const opts = state.divisions.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
     $$('.division-select').forEach((s) => { const v = s.value; s.innerHTML = `<option value="">Tanpa Divisi</option>${opts}`; s.value = v; });
     $$('.division-select-plain').forEach((s) => { const v = s.value; s.innerHTML = opts; if (v) s.value = v; });
-    const kelasSel = $('#dashFilterKelas'); const kv = kelasSel.value;
-    const kelas = [...new Set(state.members.map((m) => m.kelas).filter(Boolean))].sort();
-    kelasSel.innerHTML = `<option value="">Semua kelas</option>${kelas.map((k) => `<option value="${esc(k)}">Kelas ${esc(k)}</option>`).join('')}`;
-    kelasSel.value = kelas.includes(kv) ? kv : '';
     const hs = $('#historyFilter'); const hv = hs.value;
     hs.innerHTML = `<option value="">Semua anggota</option>${[...state.members].sort((a, b) => a.name.localeCompare(b.name)).map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}`;
     hs.value = state.members.some((m) => String(m.id) === hv) ? hv : '';
@@ -469,7 +445,6 @@
   function bind() {
     $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) switchTab(b.dataset.tab); });
     $('#searchAnggota').addEventListener('input', renderAnggota);
-    $('#dashFilterKelas').addEventListener('change', renderDashboard);
     $('#violationFilter').addEventListener('change', renderViolations);
     $('#historyFilter').addEventListener('change', () => run(null, async () => { await loadHistory(); renderRiwayat(); }));
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });

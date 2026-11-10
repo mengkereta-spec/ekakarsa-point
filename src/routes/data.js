@@ -19,7 +19,7 @@ const MEMBER_SELECT = `
 
 router.get('/summary', wrap(async (_req, res) => {
   const [members, divisions, programs] = await Promise.all([
-    query(`${MEMBER_SELECT} ORDER BY m.points DESC, m.name ASC`),
+    query(`${MEMBER_SELECT} ORDER BY m.name ASC`),
     query(`SELECT d.id, d.name, count(m.id)::int AS member_count,
              COALESCE(sum(m.points),0)::int AS total_points
            FROM divisions d LEFT JOIN members m ON m.division_id = d.id
