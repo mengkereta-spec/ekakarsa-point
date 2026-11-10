@@ -8,10 +8,14 @@
   const fmtDate = (d) => new Date(d).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
   const fmtDay = (d) => new Date(d).toLocaleDateString('id-ID', { dateStyle: 'long' });
   const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
+  // Tanggal lokal (zona waktu perangkat) dalam format YYYY-MM-DD.
+  const localISO = (d = new Date()) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
   const state = {
     me: null, members: [], divisions: [], programs: [], history: [], violations: [], users: [],
     vconfig: null, tab: 'dashboard',
+    items: [], activeLoans: [], returnedLoans: [],
+    schedule: [], attendance: null, recap: [], attDirty: false,
   };
   const isAdmin = () => state.me?.role === 'admin';
   const isApprover = () => ['pembina', 'ketua', 'calon_ketua'].includes(state.me?.role);
@@ -57,10 +61,25 @@
     state.violations = r.violations;
     if (!state.vconfig) state.vconfig = await api('GET', '/api/violations/config');
   }
+  async function loadItems() {
+    const r = await api('GET', '/api/items');
+    Object.assign(state, { items: r.items, activeLoans: r.activeLoans, returnedLoans: r.returnedLoans });
+  }
+  async function loadPiket() {
+    const date = $('#piketDate').value || localISO();
+    const to = localISO(); const from = localISO(new Date(Date.now() - 29 * 864e5));
+    const [s, a, r] = await Promise.all([
+      api('GET', '/api/piket'),
+      api('GET', `/api/piket/attendance?date=${date}`),
+      api('GET', `/api/piket/recap?from=${from}&to=${to}`),
+    ]);
+    state.schedule = s.schedule; state.recap = r.recap;
+    if (!state.attDirty) state.attendance = a;
+  }
   async function loadUsers() { state.users = isAdmin() ? (await api('GET', '/api/users')).users : []; }
 
   async function refresh() {
-    await Promise.all([loadSummary(), loadHistory(), loadViolations(), loadUsers()]);
+    await Promise.all([loadSummary(), loadHistory(), loadViolations(), loadUsers(), loadItems(), loadPiket()]);
     renderAll();
   }
 
@@ -68,6 +87,7 @@
   function renderAll() {
     populateSelects();
     renderDashboard(); renderAnggota(); renderDivisi(); renderProker(); renderRiwayat(); renderViolations(); renderUsers();
+    renderBarang(); renderPiket();
   }
 
   const pointClass = (p) => (p < 0 ? 'text-red-600' : 'text-brandGreen');
@@ -207,7 +227,7 @@
     $('#approverInfo').classList.toggle('hidden', !isApprover());
     if (me) {
       $('#panelTitle').textContent = `Panel ${me.roleLabel}`;
-      $('#panelSubtitle').textContent = isAdmin() ? 'Kelola anggota, poin, divisi, program kerja, dan akun' : 'Kelola laporan pelanggaran';
+      $('#panelSubtitle').textContent = isAdmin() ? 'Kelola anggota, poin, divisi, program kerja, barang, piket, dan akun' : 'Kelola laporan pelanggaran';
       $('#approverRole').textContent = me.roleLabel;
     }
     if (!me && state.tab === 'pelanggaran') switchTab('dashboard');
@@ -421,6 +441,188 @@
     }
   }
 
+  /* ---------- Barang ---------- */
+  const CONDITION = {
+    baik: ['Baik', 'bg-green-100 text-brandGreen'],
+    rusak_ringan: ['Rusak ringan', 'bg-amber-100 text-amber-700'],
+    rusak_berat: ['Rusak berat', 'bg-red-100 text-red-700'],
+  };
+  const conditionChip = (c) => { const [l, cls] = CONDITION[c] || CONDITION.baik; return `<span class="chip ${cls}">${l}</span>`; };
+
+  function renderBarang() {
+    const q = $('#searchBarang').value.trim().toLowerCase();
+    const admin = isAdmin();
+    const list = state.items.filter((i) => !q || `${i.name} ${i.category} ${i.location}`.toLowerCase().includes(q));
+    $('#itemCount').textContent = state.items.length;
+    $('#loanCount').textContent = state.activeLoans.length;
+    $('#brokenCount').textContent = state.items.filter((i) => i.condition !== 'baik').length;
+    $('#tableBarang').innerHTML = list.length ? list.map((i) => {
+      const avail = i.quantity - i.borrowed;
+      return `<tr class="hover:bg-gray-50">
+        <td class="p-3"><div class="font-medium text-gray-800">${esc(i.name)}</div>${i.notes ? `<div class="text-xs text-gray-400">${esc(i.notes)}</div>` : ''}</td>
+        <td class="p-3 text-gray-600">${esc(i.category || '-')}</td>
+        <td class="p-3 text-right">${i.quantity} <span class="text-gray-400 text-xs">${esc(i.unit)}</span></td>
+        <td class="p-3 text-right font-bold ${avail > 0 ? 'text-brandGreen' : 'text-red-600'}">${avail}</td>
+        <td class="p-3">${conditionChip(i.condition)}</td>
+        <td class="p-3 text-gray-600">${esc(i.location || '-')}</td>
+        ${admin ? `<td class="p-3 text-center whitespace-nowrap">
+          <button class="icon-btn text-sky-600 hover:bg-sky-50" title="Edit" data-action="edit-item" data-id="${i.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn text-red-600 hover:bg-red-50" title="Hapus" data-action="delete-item" data-id="${i.id}"><i class="fa-solid fa-trash"></i></button>
+        </td>` : ''}
+      </tr>`;
+    }).join('') : `<tr><td colspan="7" class="p-4 text-center text-gray-400">${q ? 'Tidak ada yang cocok' : 'Belum ada data barang'}</td></tr>`;
+
+    const today = localISO();
+    const staff = !!state.me;
+    $('#listLoans').innerHTML = state.activeLoans.length ? state.activeLoans.map((l) => {
+      const late = l.due_date && l.due_date < today;
+      return `<div class="flex flex-col sm:flex-row sm:items-center gap-2 border rounded-lg p-3 ${late ? 'border-red-300 bg-red-50' : ''}">
+        <div class="flex-1 min-w-0 text-sm">
+          <p><b>${esc(l.borrower_name)}</b> meminjam <b>${l.quantity} &times; ${esc(l.item_name)}</b></p>
+          <p class="text-xs text-gray-500">${l.purpose ? `${esc(l.purpose)} &middot; ` : ''}sejak ${fmtDay(l.loan_date)}${l.due_date ? ` &middot; kembali ${fmtDay(l.due_date)}` : ''}${late ? ' <b class="text-red-600">(terlambat)</b>' : ''}</p>
+        </div>
+        ${staff ? `<div class="flex gap-2 shrink-0">
+          <button class="btn-primary" data-action="return-loan" data-id="${l.id}"><i class="fa-solid fa-rotate-left"></i> Kembalikan</button>
+          ${isAdmin() ? `<button class="icon-btn text-red-600 hover:bg-red-50" title="Hapus catatan" data-action="delete-loan" data-id="${l.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </div>` : ''}
+      </div>`;
+    }).join('') : '<p class="text-sm text-gray-400">Tidak ada barang yang sedang dipinjam</p>';
+
+    $('#listReturned').innerHTML = state.returnedLoans.length ? state.returnedLoans.slice(0, 20).map((l) => `
+      <div class="flex items-start justify-between gap-2 border-b last:border-0 py-2 text-sm">
+        <div class="min-w-0"><p><b>${esc(l.borrower_name)}</b> &middot; ${l.quantity} &times; ${esc(l.item_name)}</p>
+        <p class="text-xs text-gray-400">${fmtDay(l.loan_date)} &rarr; ${fmtDate(l.returned_at)}${l.return_note ? ` &middot; ${esc(l.return_note)}` : ''}</p></div>
+        ${conditionChip(l.return_condition)}
+      </div>`).join('') : '<p class="text-sm text-gray-400">Belum ada pengembalian</p>';
+  }
+
+  /* ---------- Piket ---------- */
+  const DAYS = ['', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const ATT = {
+    hadir: ['Hadir', 'bg-green-100 text-brandGreen'], izin: ['Izin', 'bg-sky-100 text-sky-700'],
+    sakit: ['Sakit', 'bg-amber-100 text-amber-700'], alpa: ['Alpa', 'bg-red-100 text-red-700'],
+  };
+
+  function renderPiket() {
+    const admin = isAdmin();
+    const todayDay = new Date().getDay();
+    $('#gridPiket').innerHTML = DAYS.slice(1).map((name, idx) => {
+      const day = idx + 1;
+      const list = state.schedule.filter((s) => s.day === day);
+      return `<div class="bg-white p-4 rounded-xl shadow-sm border ${day === todayDay ? 'border-brandGreen ring-2 ring-green-100' : ''}">
+        <h3 class="font-bold text-gray-800 mb-2 flex items-center justify-between">${name}${day === todayDay ? '<span class="chip bg-green-100 text-brandGreen">Hari ini</span>' : ''}</h3>
+        ${list.length ? `<ul class="space-y-1 text-sm">${list.map((s) => `<li class="flex items-center justify-between gap-2">
+          <span class="truncate">${esc(s.member_name)} <span class="text-gray-400 text-xs">${s.kelas ? `(${esc(s.kelas)})` : ''}${s.task ? ` &middot; ${esc(s.task)}` : ''}</span></span>
+          ${admin ? `<button class="icon-btn text-red-600 hover:bg-red-50 shrink-0" title="Hapus dari jadwal" data-action="delete-piket" data-id="${s.id}"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        </li>`).join('')}</ul>` : '<p class="text-xs text-gray-400">Belum ada petugas</p>'}
+      </div>`;
+    }).join('');
+    renderAttendance();
+    $('#tableRecap').innerHTML = state.recap.length ? state.recap.map((r) => `<tr>
+      <td class="p-2">${esc(r.member_name)}</td><td class="p-2 text-center text-brandGreen font-semibold">${r.hadir}</td>
+      <td class="p-2 text-center">${r.izin}</td><td class="p-2 text-center">${r.sakit}</td>
+      <td class="p-2 text-center ${r.alpa ? 'text-red-600 font-semibold' : ''}">${r.alpa}</td></tr>`).join('')
+      : '<tr><td colspan="5" class="p-3 text-center text-gray-400">Belum ada absensi</td></tr>';
+  }
+
+  function renderAttendance() {
+    const a = state.attendance;
+    if (!a || state.attDirty) return;
+    $('#piketDayName').textContent = `· ${a.dayName}, ${fmtDay(a.date)}`;
+    const staff = !!state.me;
+    const future = a.date > localISO();
+    $('#saveAttendanceBtn').disabled = future || !a.records.length;
+    $('#listAttendance').innerHTML = a.records.length ? a.records.map((r) => {
+      const cur = r.attendance;
+      const control = staff && !future
+        ? `<div class="flex flex-wrap gap-1">${['', ...Object.keys(ATT)].map((k) => `<label class="cursor-pointer"><input type="radio" class="sr-only peer" name="st_${r.member_id}" value="${k}" ${(cur?.status || '') === k ? 'checked' : ''}>
+            <span class="chip border peer-checked:border-brandGreen peer-checked:ring-1 peer-checked:ring-brandGreen ${k ? ATT[k][1] : 'bg-gray-50 text-gray-500'}">${k ? ATT[k][0] : 'Belum'}</span></label>`).join('')}
+           <input name="note_${r.member_id}" maxlength="200" class="input py-1 text-xs mt-1" placeholder="Catatan (opsional)" value="${esc(cur?.note || '')}"></div>`
+        : (cur ? `<span class="chip ${ATT[cur.status][1]}">${ATT[cur.status][0]}</span>${cur.note ? ` <span class="text-xs text-gray-400">${esc(cur.note)}</span>` : ''}` : '<span class="text-xs text-gray-400">Belum diabsen</span>');
+      return `<div class="py-2 flex flex-col sm:flex-row sm:items-center gap-2" data-member="${r.member_id}">
+        <div class="flex-1 min-w-0"><b>${esc(r.member_name)}</b> <span class="text-xs text-gray-400">${r.kelas ? `(${esc(r.kelas)})` : ''}${r.task ? ` &middot; ${esc(r.task)}` : ''}</span></div>
+        <div class="sm:w-80">${control}</div>
+      </div>`;
+    }).join('') : `<p class="text-gray-400 py-2">${a.day === 7 ? 'Hari Minggu tidak ada jadwal piket.' : 'Tidak ada petugas piket terjadwal untuk hari ini.'}</p>`;
+  }
+
+  function openItemForm(id) {
+    const i = id ? state.items.find((x) => x.id === Number(id)) : { name: '', category: '', quantity: 1, unit: 'buah', condition: 'baik', location: '', notes: '' };
+    const cats = [...new Set(state.items.map((x) => x.category).filter(Boolean))].sort();
+    openModal(`<h3 class="text-lg font-bold text-gray-800">${id ? 'Edit' : 'Tambah'} Barang</h3>
+      <form class="space-y-3">
+        <div><label class="text-xs text-gray-500">Nama barang</label><input name="name" class="input mt-1" required maxlength="120" value="${esc(i.name)}" placeholder="cth: Sound system portable"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs text-gray-500">Kategori</label><input name="category" list="itemCats" class="input mt-1" maxlength="60" value="${esc(i.category)}" placeholder="cth: Elektronik"><datalist id="itemCats">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
+          <div><label class="text-xs text-gray-500">Lokasi</label><input name="location" class="input mt-1" maxlength="120" value="${esc(i.location)}" placeholder="cth: Ruang OSIS"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div><label class="text-xs text-gray-500">Jumlah</label><input type="number" name="quantity" min="${id ? i.borrowed : 0}" max="100000" class="input mt-1" required value="${i.quantity}"></div>
+          <div><label class="text-xs text-gray-500">Satuan</label><input name="unit" class="input mt-1" maxlength="20" value="${esc(i.unit)}"></div>
+          <div><label class="text-xs text-gray-500">Kondisi</label><select name="condition" class="input mt-1">${Object.entries(CONDITION).map(([k, [l]]) => `<option value="${k}" ${i.condition === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        </div>
+        <div><label class="text-xs text-gray-500">Catatan</label><textarea name="notes" rows="2" maxlength="500" class="input mt-1">${esc(i.notes)}</textarea></div>
+        ${modalButtons('Simpan')}
+      </form>`, async (_f, fd) => {
+      const body = Object.fromEntries(fd);
+      if (id) await api('PUT', `/api/items/${id}`, body); else await api('POST', '/api/items', body);
+      closeModal(); toast(id ? 'Barang diperbarui' : 'Barang ditambahkan'); await refresh();
+    });
+  }
+
+  function openLoanForm() {
+    const avail = state.items.filter((i) => i.quantity - i.borrowed > 0);
+    if (!avail.length) { toast('Tidak ada barang yang tersedia untuk dipinjam', 'err'); return; }
+    const today = localISO();
+    openModal(`<h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-hand-holding text-brandGold"></i> Catat Peminjaman</h3>
+      <form class="space-y-3">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2"><label class="text-xs text-gray-500">Barang</label><select name="itemId" class="input mt-1" required><option value="">— Pilih barang —</option>${avail.map((i) => `<option value="${i.id}">${esc(i.name)} (tersedia ${i.quantity - i.borrowed} ${esc(i.unit)})</option>`).join('')}</select></div>
+          <div><label class="text-xs text-gray-500">Jumlah</label><input type="number" name="quantity" min="1" value="1" class="input mt-1" required></div>
+        </div>
+        <div><label class="text-xs text-gray-500">Peminjam</label><select name="memberId" class="input mt-1"><option value="">— Bukan anggota OSIS (isi nama di bawah) —</option>${memberOptions()}</select></div>
+        <input name="borrowerName" class="input" maxlength="120" placeholder="Nama peminjam lain (cth: Pak Budi, Guru Olahraga)">
+        <div><label class="text-xs text-gray-500">Keperluan</label><input name="purpose" class="input mt-1" maxlength="300" placeholder="cth: Acara class meeting"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs text-gray-500">Tanggal pinjam</label><input type="date" name="loanDate" class="input mt-1" value="${today}" required></div>
+          <div><label class="text-xs text-gray-500">Rencana kembali</label><input type="date" name="dueDate" class="input mt-1" min="${today}"></div>
+        </div>
+        ${modalButtons('Simpan')}
+      </form>`, async (_f, fd) => {
+      await api('POST', '/api/loans', Object.fromEntries(fd));
+      closeModal(); toast('Peminjaman dicatat'); await refresh();
+    });
+  }
+
+  function openReturnForm(id) {
+    const l = state.activeLoans.find((x) => x.id === Number(id));
+    openModal(`<h3 class="text-lg font-bold text-gray-800">Pengembalian Barang</h3>
+      <p class="text-sm text-gray-600"><b>${esc(l.borrower_name)}</b> mengembalikan <b>${l.quantity} &times; ${esc(l.item_name)}</b></p>
+      <form class="space-y-3">
+        <div><label class="text-xs text-gray-500">Kondisi saat dikembalikan</label><select name="condition" class="input mt-1">${Object.entries(CONDITION).map(([k, [lb]]) => `<option value="${k}">${lb}</option>`).join('')}</select></div>
+        <input name="note" class="input" maxlength="300" placeholder="Catatan (opsional)">
+        <p class="text-xs text-gray-400">Jika barang rusak, ubah juga kondisi barang lewat tombol edit di daftar barang.</p>
+        ${modalButtons('Konfirmasi Kembali')}
+      </form>`, async (_f, fd) => {
+      await api('POST', `/api/loans/${id}/return`, Object.fromEntries(fd));
+      closeModal(); toast('Barang dikembalikan'); await refresh();
+    });
+  }
+
+  function openPiketForm() {
+    if (!state.members.length) { toast('Belum ada anggota', 'err'); return; }
+    openModal(`<h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-broom text-brandGreen"></i> Tambah Petugas Piket</h3>
+      <form class="space-y-3">
+        <div><label class="text-xs text-gray-500">Hari</label><select name="day" class="input mt-1" required>${DAYS.slice(1).map((d, i) => `<option value="${i + 1}">${d}</option>`).join('')}</select></div>
+        <div><label class="text-xs text-gray-500">Anggota</label><select name="memberId" class="input mt-1" required><option value="">— Pilih anggota —</option>${memberOptions()}</select></div>
+        <div><label class="text-xs text-gray-500">Tugas (opsional)</label><input name="task" class="input mt-1" maxlength="120" placeholder="cth: Kebersihan ruang OSIS"></div>
+        ${modalButtons('Tambah')}
+      </form>`, async (form, fd) => {
+      await api('POST', '/api/piket', Object.fromEntries(fd));
+      form.memberId.value = ''; toast('Petugas piket ditambahkan'); await refresh();
+    });
+  }
+
   function openPassword() {
     openModal(`<h3 class="text-lg font-bold text-gray-800">Ganti Password</h3>
       <form class="space-y-3">
@@ -446,6 +648,10 @@
     $('#tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) switchTab(b.dataset.tab); });
     $('#searchAnggota').addEventListener('input', renderAnggota);
     $('#violationFilter').addEventListener('change', renderViolations);
+    $('#searchBarang').addEventListener('input', renderBarang);
+    $('#piketDate').value = localISO();
+    $('#piketDate').addEventListener('change', () => run(null, async () => { state.attDirty = false; await loadPiket(); renderPiket(); }));
+    $('#attendanceForm').addEventListener('change', () => { state.attDirty = true; });
     $('#historyFilter').addEventListener('change', () => run(null, async () => { await loadHistory(); renderRiwayat(); }));
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
@@ -473,6 +679,14 @@
         'add-witness': () => { const list = $('#witnessList'); list.insertAdjacentHTML('beforeend', witnessRow(list.children.length + Date.now())); },
         'remove-witness': () => el.closest('.witness').remove(),
         'open-password': openPassword,
+        'open-item-form': () => openItemForm(),
+        'edit-item': () => openItemForm(id),
+        'delete-item': () => { const i = state.items.find((x) => x.id === Number(id)); confirmModal('Hapus Barang', `Hapus <b>${esc(i.name)}</b> dari daftar barang?`, 'Hapus', async () => { await api('DELETE', `/api/items/${id}`); toast('Barang dihapus'); await refresh(); }); },
+        'open-loan-form': openLoanForm,
+        'return-loan': () => openReturnForm(id),
+        'delete-loan': () => confirmModal('Hapus Catatan Peminjaman', 'Hapus catatan peminjaman ini? Stok tersedia akan kembali seperti sebelum dipinjam.', 'Hapus', async () => { await api('DELETE', `/api/loans/${id}`); toast('Catatan dihapus'); await refresh(); }),
+        'open-piket-form': openPiketForm,
+        'delete-piket': () => { const p = state.schedule.find((x) => x.id === Number(id)); confirmModal('Hapus dari Jadwal', `Hapus <b>${esc(p.member_name)}</b> dari jadwal piket hari ${DAYS[p.day]}?`, 'Hapus', async () => { await api('DELETE', `/api/piket/${id}`); toast('Jadwal diperbarui'); await refresh(); }); },
         logout: () => run(el, async () => { await api('POST', '/api/auth/logout'); state.me = null; applyRole(); await refresh(); toast('Anda telah keluar'); }),
       };
       if (actions[action]) { e.preventDefault(); actions[action](); }
@@ -491,6 +705,16 @@
     bindForm('addProgramForm', async (form, fd) => { await api('POST', '/api/programs', Object.fromEntries(fd)); form.name.value = ''; toast('Proker ditambahkan'); await refresh(); });
     bindForm('addUserForm', async (form, fd) => { await api('POST', '/api/users', Object.fromEntries(fd)); form.reset(); toast('Akun dibuat'); await refresh(); });
     bindForm('importForm', (form) => handleImport(form));
+    bindForm('attendanceForm', async (form) => {
+      const a = state.attendance;
+      const records = a.records.map((r) => ({
+        memberId: r.member_id,
+        status: form.querySelector(`input[name="st_${r.member_id}"]:checked`)?.value || '',
+        note: form.querySelector(`[name="note_${r.member_id}"]`)?.value || '',
+      }));
+      await api('PUT', '/api/piket/attendance', { date: a.date, records });
+      state.attDirty = false; toast('Absensi piket disimpan'); await refresh();
+    });
     bindForm('resetForm', async (form, fd) => {
       const body = Object.fromEntries(fd);
       if (body.confirm !== 'RESET') throw new Error('Ketik RESET (huruf besar) untuk konfirmasi');

@@ -17,6 +17,14 @@ Aplikasi web (frontend + backend + database PostgreSQL) berdasarkan prototipe *E
 - Unduh template Excel, ekspor data anggota ke Excel
 - Kelola akun pengelola: Admin, Pembina OSIS, Ketua OSIS, Calon Ketua OSIS
 
+**Manajemen barang**
+- Daftar inventaris OSIS: nama, kategori, jumlah, satuan, kondisi (baik / rusak ringan / rusak berat), lokasi, catatan. Tambah/edit/hapus khusus admin.
+- Peminjaman barang dicatat oleh akun pengelola mana pun (peminjam anggota OSIS atau nama lain), stok tersedia dihitung otomatis dan tidak bisa dipinjam melebihi stok. Pengembalian mencatat kondisi barang. Peminjaman yang lewat tanggal kembali ditandai *terlambat*.
+
+**Sistem piket**
+- Jadwal piket mingguan Senin–Sabtu (anggota + tugas), diatur admin. Hari ini ditandai di tampilan.
+- Absensi piket harian (hadir / izin / sakit / alpa + catatan) diisi akun pengelola mana pun, plus rekap absensi 30 hari terakhir. Anggota bisa melihat tanpa login.
+
 **Sistem pelanggaran**
 - Laporan pelanggaran dibuat oleh akun pengelola mana pun, **wajib minimal 2 saksi** berbeda (anggota OSIS atau nama lain, mis. guru). Terlapor tidak bisa menjadi saksi.
 - Poin **baru dikurangi setelah disetujui** Pembina / Ketua / Calon Ketua OSIS. Jumlah persetujuan yang dibutuhkan diatur lewat `REQUIRED_APPROVALS` (default 1 = salah satu cukup).
@@ -79,7 +87,7 @@ Divisi boleh ditulis `IT` atau `Divisi IT`. Divisi yang belum ada dibuat otomati
 src/server.js             entry point
 src/app.js                Express, keamanan, routing
 src/db.js, db/schema.sql  koneksi & skema PostgreSQL (migrasi otomatis)
-src/routes/*.js           API: auth, data, import/export, pelanggaran
+src/routes/*.js           API: auth, data, import/export, pelanggaran, barang (inventory), piket
 public/                   frontend (HTML + JS + Tailwind hasil build)
 public/surat.*            halaman surat keterangan pelanggaran
 test/api.test.js          uji integrasi API

@@ -43,6 +43,8 @@ function createApp() {
   api.use(require('./routes/data'));
   api.use(require('./routes/importExport'));
   api.use(require('./routes/violations'));
+  api.use(require('./routes/inventory'));
+  api.use(require('./routes/piket'));
   api.use((_req, res) => res.status(404).json({ error: 'Endpoint tidak ditemukan.' }));
   // eslint-disable-next-line no-unused-vars
   api.use((err, _req, res, _next) => {

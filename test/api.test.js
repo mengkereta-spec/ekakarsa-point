@@ -149,6 +149,62 @@ test('pelanggaran: minimal 2 saksi, approval, pengurangan poin, surat', async ()
   assert.equal(s2.body.members.find((x) => x.id === t.id).points, -10);
 });
 
+test('manajemen barang: stok, peminjaman, pengembalian', async () => {
+  assert.equal((await agents.pembina.post('/api/items').set(H).send({ name: 'Proyektor', quantity: 2 })).status, 403);
+  let r = await agents.admin.post('/api/items').set(H).send({ name: 'Proyektor', category: 'Elektronik', quantity: 2, unit: 'unit', location: 'Ruang OSIS' });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  const itemId = r.body.id;
+  const s = await request(app).get('/api/summary');
+  const m = s.body.members[0];
+  assert.equal((await request(app).post('/api/loans').set(H).send({ itemId, quantity: 1, memberId: m.id })).status, 401);
+  r = await agents.ketua.post('/api/loans').set(H).send({ itemId, quantity: 3, memberId: m.id });
+  assert.equal(r.status, 400, 'melebihi stok');
+  r = await agents.ketua.post('/api/loans').set(H).send({ itemId, quantity: 2, memberId: m.id, purpose: 'Rapat pleno' });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  const loanId = r.body.id;
+  let list = await request(app).get('/api/items');
+  assert.equal(list.body.items[0].borrowed, 2);
+  assert.equal(list.body.activeLoans.length, 1);
+  assert.equal((await agents.admin.put(`/api/items/${itemId}`).set(H).send({ name: 'Proyektor', quantity: 1 })).status, 400);
+  assert.equal((await agents.admin.delete(`/api/items/${itemId}`).set(H)).status, 400);
+  r = await agents.pembina.post(`/api/loans/${loanId}/return`).set(H).send({ condition: 'rusak_ringan', note: 'Kabel longgar' });
+  assert.equal(r.status, 200);
+  assert.equal((await agents.pembina.post(`/api/loans/${loanId}/return`).set(H).send({})).status, 400);
+  list = await request(app).get('/api/items');
+  assert.equal(list.body.items[0].borrowed, 0);
+  assert.equal(list.body.returnedLoans[0].return_condition, 'rusak_ringan');
+  r = await agents.ketua.post('/api/loans').set(H).send({ itemId, quantity: 1, borrowerName: 'Pak Budi' });
+  assert.equal(r.status, 201);
+  assert.equal((await agents.admin.delete(`/api/loans/${r.body.id}`).set(H)).status, 200);
+  assert.equal((await agents.admin.delete(`/api/items/${itemId}`).set(H)).status, 200);
+});
+
+test('sistem piket: jadwal & absensi', async () => {
+  const s = await request(app).get('/api/summary');
+  const [a, b] = s.body.members;
+  assert.equal((await agents.ketua.post('/api/piket').set(H).send({ day: 1, memberId: a.id })).status, 403);
+  let r = await agents.admin.post('/api/piket').set(H).send({ day: 1, memberId: a.id, task: 'Sapu ruang OSIS' });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal((await agents.admin.post('/api/piket').set(H).send({ day: 1, memberId: a.id })).status, 409);
+  assert.equal((await agents.admin.post('/api/piket').set(H).send({ day: 7, memberId: a.id })).status, 400);
+  await agents.admin.post('/api/piket').set(H).send({ day: 1, memberId: b.id });
+  const sched = await request(app).get('/api/piket');
+  assert.equal(sched.body.schedule.length, 2);
+  // 2026-11-09 adalah hari Senin.
+  let att = await request(app).get('/api/piket/attendance?date=2026-11-09');
+  assert.equal(att.body.dayName, 'Senin');
+  assert.equal(att.body.records.length, 2);
+  assert.equal((await request(app).put('/api/piket/attendance').set(H).send({ date: '2026-11-09', records: [{ memberId: a.id, status: 'hadir' }] })).status, 401);
+  r = await agents.ketua.put('/api/piket/attendance').set(H).send({ date: '2026-11-09', records: [{ memberId: a.id, status: 'hadir' }, { memberId: b.id, status: 'alpa', note: 'Tanpa kabar' }] });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  att = await request(app).get('/api/piket/attendance?date=2026-11-09');
+  assert.equal(att.body.records.find((x) => x.member_id === b.id).attendance.status, 'alpa');
+  const recap = await request(app).get('/api/piket/recap?from=2026-11-01&to=2026-11-30');
+  assert.equal(recap.body.recap.find((x) => x.member_id === a.id).hadir, 1);
+  assert.equal((await agents.ketua.put('/api/piket/attendance').set(H).send({ date: '2999-01-01', records: [{ memberId: a.id, status: 'hadir' }] })).status, 400);
+  assert.equal((await agents.admin.delete(`/api/piket/${sched.body.schedule[0].id}`).set(H)).status, 200);
+});
+
 test('ganti password membatalkan sesi lama', async () => {
   const a = await login('calon', 'password-123');
   const old = await login('calon', 'password-123');

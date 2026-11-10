@@ -90,3 +90,60 @@ CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- ====== Manajemen barang (inventaris OSIS) ======
+CREATE TABLE IF NOT EXISTS items (
+  id         SERIAL PRIMARY KEY,
+  name       TEXT NOT NULL,
+  category   TEXT NOT NULL DEFAULT '',
+  quantity   INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+  unit       TEXT NOT NULL DEFAULT 'buah',
+  condition  TEXT NOT NULL DEFAULT 'baik' CHECK (condition IN ('baik','rusak_ringan','rusak_berat')),
+  location   TEXT NOT NULL DEFAULT '',
+  notes      TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS item_loans (
+  id              SERIAL PRIMARY KEY,
+  item_id         INTEGER REFERENCES items(id) ON DELETE SET NULL,
+  item_name       TEXT NOT NULL,
+  quantity        INTEGER NOT NULL CHECK (quantity > 0),
+  member_id       INTEGER REFERENCES members(id) ON DELETE SET NULL,
+  borrower_name   TEXT NOT NULL,
+  purpose         TEXT NOT NULL DEFAULT '',
+  loan_date       DATE NOT NULL DEFAULT CURRENT_DATE,
+  due_date        DATE,
+  status          TEXT NOT NULL DEFAULT 'dipinjam' CHECK (status IN ('dipinjam','dikembalikan')),
+  returned_at     TIMESTAMPTZ,
+  return_condition TEXT CHECK (return_condition IN ('baik','rusak_ringan','rusak_berat')),
+  return_note     TEXT NOT NULL DEFAULT '',
+  recorded_by     TEXT NOT NULL,
+  returned_by     TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS item_loans_status_idx ON item_loans (status, created_at DESC);
+
+-- ====== Sistem piket ======
+CREATE TABLE IF NOT EXISTS piket_schedule (
+  id         SERIAL PRIMARY KEY,
+  day        SMALLINT NOT NULL CHECK (day BETWEEN 1 AND 6),
+  member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  task       TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (day, member_id)
+);
+
+CREATE TABLE IF NOT EXISTS piket_attendance (
+  id          SERIAL PRIMARY KEY,
+  date        DATE NOT NULL,
+  member_id   INTEGER REFERENCES members(id) ON DELETE CASCADE,
+  member_name TEXT NOT NULL,
+  status      TEXT NOT NULL CHECK (status IN ('hadir','izin','sakit','alpa')),
+  note        TEXT NOT NULL DEFAULT '',
+  recorded_by TEXT NOT NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (date, member_id)
+);
+CREATE INDEX IF NOT EXISTS piket_attendance_date_idx ON piket_attendance (date);

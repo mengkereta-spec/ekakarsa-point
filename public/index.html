@@ -26,6 +26,8 @@
       <button data-tab="anggota" class="tab-btn"><i class="fa-solid fa-users"></i> Anggota</button>
       <button data-tab="divisi" class="tab-btn"><i class="fa-solid fa-sitemap"></i> Divisi</button>
       <button data-tab="proker" class="tab-btn"><i class="fa-solid fa-clipboard-list"></i> Program Kerja</button>
+      <button data-tab="barang" class="tab-btn"><i class="fa-solid fa-boxes-stacked"></i> Barang</button>
+      <button data-tab="piket" class="tab-btn"><i class="fa-solid fa-broom"></i> Piket</button>
       <button data-tab="pelanggaran" class="tab-btn staff-only hidden"><i class="fa-solid fa-gavel"></i> Pelanggaran <span id="pendingBadge" class="hidden ml-1 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"></span></button>
       <button data-tab="riwayat" class="tab-btn"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</button>
       <button data-tab="admin" class="tab-btn"><i class="fa-solid fa-lock"></i> <span id="adminTabLabel">Akses Admin</span></button>
@@ -87,6 +89,80 @@
     <section id="tab-proker" class="space-y-6 hidden">
       <h2 class="text-xl font-bold text-gray-800">Program Kerja Per Divisi</h2>
       <div class="space-y-4" id="listProker"></div>
+    </section>
+
+    <!-- BARANG -->
+    <section id="tab-barang" class="space-y-6 hidden">
+      <div class="flex justify-between items-center flex-col sm:flex-row gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800">Manajemen Barang OSIS</h2>
+          <p class="text-xs text-gray-500 mt-1">Daftar inventaris, stok tersedia, dan peminjaman barang.</p>
+        </div>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <input type="search" id="searchBarang" placeholder="Cari barang/kategori/lokasi..." class="input sm:w-64">
+          <button data-action="open-loan-form" class="btn-ghost whitespace-nowrap staff-only hidden"><i class="fa-solid fa-hand-holding"></i> Pinjamkan</button>
+          <button data-action="open-item-form" class="btn-primary whitespace-nowrap admin-only hidden"><i class="fa-solid fa-plus"></i> Barang</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-brandGreen"><p class="text-xs text-gray-500 uppercase">Jenis barang</p><p id="itemCount" class="text-2xl font-bold text-gray-800">0</p></div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-brandGold"><p class="text-xs text-gray-500 uppercase">Sedang dipinjam</p><p id="loanCount" class="text-2xl font-bold text-gray-800">0</p></div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500"><p class="text-xs text-gray-500 uppercase">Barang rusak</p><p id="brokenCount" class="text-2xl font-bold text-gray-800">0</p></div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-50 text-gray-600 uppercase text-xs">
+                <th class="p-3">Barang</th><th class="p-3">Kategori</th><th class="p-3 text-right">Jumlah</th><th class="p-3 text-right">Tersedia</th><th class="p-3">Kondisi</th><th class="p-3">Lokasi</th>
+                <th class="p-3 text-center admin-only hidden">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableBarang" class="divide-y divide-gray-100 text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-5 space-y-3">
+        <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-hand-holding text-brandGold"></i> Sedang Dipinjam</h3>
+        <div id="listLoans" class="space-y-2"></div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-5 space-y-3">
+        <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-rotate-left text-brandGreen"></i> Riwayat Pengembalian</h3>
+        <div id="listReturned" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- PIKET -->
+    <section id="tab-piket" class="space-y-6 hidden">
+      <div class="flex justify-between items-center flex-col sm:flex-row gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800">Jadwal Piket OSIS</h2>
+          <p class="text-xs text-gray-500 mt-1">Jadwal mingguan Senin&ndash;Sabtu dan absensi petugas piket.</p>
+        </div>
+        <button data-action="open-piket-form" class="btn-primary whitespace-nowrap admin-only hidden"><i class="fa-solid fa-plus"></i> Tambah Petugas</button>
+      </div>
+      <div id="gridPiket" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <div class="bg-white rounded-xl shadow-sm p-5 space-y-4">
+        <div class="flex justify-between items-center flex-col sm:flex-row gap-3">
+          <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-user-check text-brandGreen"></i> Absensi Piket <span id="piketDayName" class="text-gray-400 font-normal"></span></h3>
+          <input type="date" id="piketDate" class="input sm:w-48">
+        </div>
+        <form id="attendanceForm" class="space-y-3">
+          <div id="listAttendance" class="divide-y text-sm"></div>
+          <div class="flex justify-end staff-only hidden"><button type="submit" id="saveAttendanceBtn" class="btn-primary">Simpan Absensi</button></div>
+        </form>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm p-5 space-y-3">
+        <h3 class="font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-chart-simple text-brandGold"></i> Rekap Absensi 30 Hari Terakhir</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead><tr class="bg-gray-50 text-gray-600 uppercase text-xs"><th class="p-2">Nama</th><th class="p-2 text-center">Hadir</th><th class="p-2 text-center">Izin</th><th class="p-2 text-center">Sakit</th><th class="p-2 text-center">Alpa</th></tr></thead>
+            <tbody id="tableRecap" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- PELANGGARAN (khusus pengelola) -->
