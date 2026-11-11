@@ -24,4 +24,7 @@ module.exports = {
   },
   schoolName: env.SCHOOL_NAME || 'OSIS Ekakarsa',
   trustProxy: env.TRUST_PROXY || (isProd ? '1' : 'false'),
+  // Cookie Secure + upgrade-insecure-requests. Default aktif di production (wajib HTTPS).
+  // Set COOKIE_SECURE=false hanya untuk uji coba sementara lewat http://IP:PORT tanpa HTTPS.
+  secureCookies: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : isProd,
 };

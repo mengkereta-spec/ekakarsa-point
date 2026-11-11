@@ -1,0 +1,19 @@
+# Ekakarsa Point di VPS, database TETAP di Supabase (data lama langsung terpakai).
+# Isi DATABASE_URL di .env dengan "Session pooler" Supabase (port 5432), DATABASE_SSL=true.
+#   docker compose -f docker-compose.supabase.yml up -d --build
+services:
+  app:
+    build: .
+    image: ekakarsa-point:latest
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      DATABASE_SSL: "true"
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
