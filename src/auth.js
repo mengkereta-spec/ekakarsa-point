@@ -13,7 +13,7 @@ function issueSession(res, user) {
   });
   res.cookie(COOKIE, token, {
     httpOnly: true,
-    secure: config.isProd,
+    secure: config.secureCookies,
     sameSite: 'strict',
     maxAge: config.sessionHours * 3600 * 1000,
     path: '/',
@@ -21,7 +21,7 @@ function issueSession(res, user) {
 }
 
 function clearSession(res) {
-  res.clearCookie(COOKIE, { path: '/', sameSite: 'strict', secure: config.isProd, httpOnly: true });
+  res.clearCookie(COOKIE, { path: '/', sameSite: 'strict', secure: config.secureCookies, httpOnly: true });
 }
 
 // Membaca sesi (jika ada) dan memvalidasinya ke database pada setiap request.

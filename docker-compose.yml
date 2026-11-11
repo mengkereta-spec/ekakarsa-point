@@ -1,31 +1,47 @@
-# Menjalankan aplikasi + PostgreSQL di satu server (VPS).
-# 1) cp .env.example .env lalu isi JWT_SECRET, ADMIN_PASSWORD, POSTGRES_PASSWORD
-# 2) docker compose up -d --build
+# Ekakarsa Point: aplikasi + PostgreSQL di satu VPS.
+# Panduan lengkap: DEPLOY-VPS.md
+#   1) cp .env.example .env  lalu isi JWT_SECRET, ADMIN_PASSWORD, POSTGRES_PASSWORD
+#   2) docker compose up -d --build
+# Aplikasi hanya mendengarkan di 127.0.0.1:3000; akses publik lewat Nginx (deploy/nginx-ekakarsa.conf).
+# Mau tetap memakai database Supabase? Pakai docker-compose.supabase.yml.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ekakarsa
       POSTGRES_USER: ekakarsa
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
+      TZ: Asia/Jakarta
     volumes:
       - dbdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ekakarsa -d ekakarsa"]
       interval: 5s
       retries: 10
+    logging: *logging
+
   app:
     build: .
+    image: ekakarsa-point:latest
     restart: unless-stopped
+    init: true
     env_file: .env
     environment:
       DATABASE_URL: postgres://ekakarsa:${POSTGRES_PASSWORD}@db:5432/ekakarsa
       DATABASE_SSL: "false"
     ports:
-      - "3000:3000"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000"
     depends_on:
       db:
         condition: service_healthy
+    logging: *logging
+
 volumes:
   dbdata:

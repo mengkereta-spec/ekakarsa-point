@@ -41,12 +41,13 @@ Aplikasi web (frontend + backend + database PostgreSQL) berdasarkan prototipe *E
 
 ## Menjalankan
 
-### Opsi A — Docker Compose (VPS / server sekolah)
+### Opsi A — VPS dengan Docker Compose (disarankan)
+Panduan lengkap langkah demi langkah (Docker, Nginx, HTTPS, pindah data dari Supabase, backup): **[DEPLOY-VPS.md](DEPLOY-VPS.md)**.
 ```bash
 cp .env.example .env      # isi JWT_SECRET (openssl rand -hex 32), ADMIN_PASSWORD, POSTGRES_PASSWORD, SCHOOL_NAME
 docker compose up -d --build
 ```
-Buka `http://<server>:3000`. Pasang di belakang Nginx/Caddy dengan HTTPS.
+Aplikasi mendengarkan di `127.0.0.1:3000`; akses publik lewat Nginx + HTTPS (`deploy/nginx-ekakarsa.conf`).
 
 ### Opsi B — Vercel + Supabase (yang dipakai saat ini)
 - Frontend statis dari `public/`, backend sebagai fungsi serverless `api/index.js` (lihat `vercel.json`).
@@ -91,4 +92,5 @@ src/routes/*.js           API: auth, data, import/export, pelanggaran, barang (i
 public/                   frontend (HTML + JS + Tailwind hasil build)
 public/surat.*            halaman surat keterangan pelanggaran
 test/api.test.js          uji integrasi API
+deploy/                   konfigurasi & skrip VPS: nginx, PM2, update, backup, import dari Supabase
 ```

@@ -23,7 +23,7 @@ function createApp() {
         connectSrc: ["'self'"],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
-        upgradeInsecureRequests: config.isProd ? [] : null,
+        upgradeInsecureRequests: config.secureCookies ? [] : null,
       },
     },
   }));
